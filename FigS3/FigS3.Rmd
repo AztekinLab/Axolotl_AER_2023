@@ -1,0 +1,100 @@
+---
+title: "FigS3"
+author: "Jixing Zhong"
+date: "2/17/2023"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+library(patchwork)
+source("../0.scripts/dot_plot_combine_sp.r")
+source("../0.scripts/confusion_mat_utils.r")
+
+meta_data <- readRDS('../Fig1/meta_data.rds')
+
+cols2 <- c(
+    brewer.pal(12, "Paired")[c(1:10, 12)],
+    "#F0027F"
+)
+names(cols2) <- levels(meta_data$CellType2)
+
+sp_col <- list(
+    "Human" =  c("#66C2A5"),
+    "Mouse" = c("#FC8D62", "#DC4204", "#B43604", "#641E02"),
+    "Chicken" = c("#8DA0CB"),
+    "Frog" = c("#E78AC3", "#D53497", "#981F6A", "#55113B"),
+    "Axolotl" = c("#A6D854", "#75A626", "#3A5313")
+)
+```
+
+
+
+```{r figS3A-B, fig.width=20, fig.height=10}
+p1 <- ggplot(meta_data, aes(UMAP_1, UMAP_2, color = CellType2)) + geom_point() + 
+  theme_classic() + scale_color_manual(values = cols2)
+
+
+p_list <- lapply(levels(meta_data$sp), function(x) {
+  
+  dat <- meta_data
+  dat$col <- as.character(dat$orig.ident)
+  dat$col[dat$sp != x]  <- 'Unselected'
+  
+  sample_ <- as.character(sort(unique(dat$orig.ident[dat$sp == x])))
+  dat$col <- factor(dat$col, levels = c(sample_, 'Unselected'))
+  
+  color <-  c(rev(sp_col[[x]]),"lightgrey")
+  names(color) <- levels(dat$col)
+  
+  dat2 <- dat[order(dat$col, decreasing = T),]
+  
+  ggplot(dat2, aes(UMAP_1, UMAP_2, color = col)) + 
+    geom_point() + theme_classic() + scale_color_manual(values = color) +
+    labs(title = x) +
+    theme(plot.title = element_text(hjust = 0.5, size = 25),
+          legend.key.size = unit(.2, 'cm'),
+          legend.title = element_blank(),
+          legend.position = c(0.2, 0.8) # inside the plot
+        ) + coord_fixed()
+})
+
+p2 <- wrap_plots(p_list, nrow = 2)
+
+p1 + p2
+
+```
+
+
+```{r Fig.S3C, fig.width=20}
+total_mat <- readRDS( '../Fig1/Fig1_supp.rds')
+
+dot_plot(
+    total_mat = total_mat,
+    x = features.plot, y = CellType
+)
+```
+
+```{r Fig.S3D}
+conf_mat <- confusion_matrix_cal(
+    targets = meta_data$CellType,
+    predictions = meta_data$CellType_sep
+)
+
+conf_mat$Prediction <- factor(conf_mat$Prediction,
+    levels = levels(meta_data$CellType_sep)
+)
+conf_mat$Target <- factor(conf_mat$Target,
+    levels = levels(meta_data$CellType)
+)
+
+
+confusion_matrix_pl(conf_mat,
+    title = "Coarse annotation",
+    xlab = "Individual clustering", ylab = "Seurat integration",
+    save = FALSE
+)
+
+```
+

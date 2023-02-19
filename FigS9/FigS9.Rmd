@@ -1,0 +1,107 @@
+---
+title: "FigS9"
+author: "Jixing Zhong"
+date: "2/19/2023"
+output: html_document
+---
+
+
+```{r}
+library(ComplexHeatmap)
+library(RColorBrewer)
+library(ggplot2)
+library(patchwork)
+```
+
+
+```{r}
+mat_list <- readRDS('mat_list.rds')
+meta_df <- readRDS('../separate_metadata_dev.rds')
+meta_df <- meta_df[meta_df$sp == 'Axolotl' & !(meta_df$CellType2 == 'Delected'),]
+
+
+cols2 <- c(
+    brewer.pal(12, "Paired")[c(1:10, 12)],
+    "#F0027F"
+)
+names(cols2) <- levels(meta_df$CellType2)[1:12]
+
+```
+
+```{r, fig.width=15}
+p_list <- lapply(1:length(mat_list), function(x) {
+    mat <- mat_list[[x]]
+
+ha <- HeatmapAnnotation(
+  CellType2 = meta_df$CellType2[match(colnames(mat), rownames(meta_df))],
+  col = list(CellType2 = cols2),
+  show_legend = TRUE, 
+  show_annotation_name = FALSE
+)
+
+Heatmap(mat,
+  name = 'Expression',
+  show_column_names = FALSE,
+  row_names_side = 'left',
+
+  column_split = meta_df$CellType2[match(colnames(mat), rownames(meta_df))],
+  top_annotation = ha,
+  column_title = names(mat_list)[x],
+  
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  
+  col = circlize::colorRamp2(c(-2, 0, 2), c("#67a9cf", "white", "#b2182b")),
+  use_raster = TRUE
+)
+
+})
+
+draw(Reduce(`+`, p_list))
+
+```
+
+
+
+
+```{r, fig.width=8, fig.height=8}
+## vlnplot for most specific markers
+vln_exp <- readRDS('supp_vln.rds')
+
+p_list <- lapply(unique(vln_exp$orig.ident), function(stage) {
+  
+  
+  p_stage <- lapply(c("DR999-PMT21178", "VWA2"), function(gene) {
+    dat <-
+      vln_exp[vln_exp$orig.ident == stage, c(gene, 'CellType2', 'orig.ident')]
+    colnames(dat) <- c('Expression', 'CellType2', 'orig.ident')
+    
+    noise <- rnorm(n = length(x = dat[, "Expression"])) / 100000
+    dat$Expression <- dat$Expression  + noise
+    
+    
+    ggplot(dat,
+           aes(CellType2, Expression,  fill = CellType2, group = CellType2)) +
+      geom_violin(scale = "width") + theme_classic() +
+      scale_fill_manual(values = cols2) +
+      labs(title = gene) +
+      theme(
+        legend.position = 'none',
+        plot.title = element_text(hjust = .5, face = 'bold'),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(
+          angle = 45,
+          vjust = 1,
+          hjust = 1
+        )
+      )
+  })
+  
+  wrap_plots(p_stage, nrow = 1)
+  
+})
+
+
+wrap_plots(p_list, ncol = 1)
+
+```

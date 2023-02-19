@@ -1,0 +1,113 @@
+---
+title: "FigS16-S19"
+author: "Jixing Zhong"
+date: "2/17/2023"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(patchwork)
+
+df_deg <- readRDS('../Fig3/supervised_clustering_DEG_umap.rds')
+df_m11 <- readRDS('supervised_clustering_M11_umap.rds')
+df_m12 <- readRDS('supervised_clustering_M12_umap.rds')
+df_m13 <- readRDS('supervised_clustering_M13_umap.rds')
+
+dev <- c("#A6CEE3", "#F0027F")
+reg <- c("#1a5e82", "#a20559")
+pl_cols <-c(
+  rep(list(dev),13), 
+  rep(list(reg),2)
+)
+
+
+lay <- '
+KGBA
+LHCF
+MID#
+#JE#
+NO##
+'
+
+```
+
+
+```{r Fig.S16 plot, fig.height=8, fig.width=10}
+p_list <- lapply(1:length(levels(df_deg$orig.ident)), function(x){
+  df_sub <- df_deg[df_deg$orig.ident == levels(df_deg$orig.ident)[x],]
+  
+  ggplot(df_sub[order(df_sub$CellType2, decreasing = TRUE),], 
+         aes(UMAP_1, UMAP_2, color = CellType2)) + geom_point(size = .3) + 
+    theme_void() + 
+    scale_color_manual(values = pl_cols[[x]]) +
+    labs(title = levels(df_deg$orig.ident)[x]) + 
+    theme(plot.title = element_text(hjust = 0.5, face = 'bold', size = 10),
+          panel.border = element_rect(color = 'black', fill=NA))
+})
+
+wrap_plots(p_list, design = lay, guides = 'collect') + 
+  plot_annotation(title = 'AER DEGs',
+                  theme = theme(plot.title = element_text(size = 18, hjust = .5, face = 'bold'))) 
+```
+
+
+
+```{r Fig.S17 plot, fig.height=8, fig.width=10}
+p_list <- lapply(1:length(levels(df_m11$orig.ident)), function(x){
+  df_sub <- df_m11[df_m11$orig.ident == levels(df_m11$orig.ident)[x],]
+  
+  ggplot(df_sub[order(df_sub$CellType2, decreasing = TRUE),], 
+         aes(UMAP_1, UMAP_2, color = CellType2)) + geom_point(size = .3) + 
+    theme_void() + 
+    scale_color_manual(values = pl_cols[[x]]) +
+    labs(title = levels(df_m11$orig.ident)[x]) + 
+    theme(plot.title = element_text(hjust = 0.5, face = 'bold', size = 10),
+          panel.border = element_rect(color = 'black', fill=NA))
+})
+
+wrap_plots(p_list, design = lay, guides = 'collect') + 
+  plot_annotation(title = 'cNMF Module 11',
+                  theme = theme(plot.title = element_text(size = 18, hjust = .5, face = 'bold'))) 
+```
+
+
+
+```{r Fig.S18 plot, fig.height=8, fig.width=10}
+p_list <- lapply(1:length(levels(df_m12$orig.ident)), function(x){
+  df_sub <- df_m12[df_m12$orig.ident == levels(df_m12$orig.ident)[x],]
+  
+  ggplot(df_sub[order(df_sub$CellType2, decreasing = TRUE),], 
+         aes(UMAP_1, UMAP_2, color = CellType2)) + geom_point(size = .3) + 
+    theme_void() + 
+    scale_color_manual(values = pl_cols[[x]]) +
+    labs(title = levels(df_m12$orig.ident)[x]) + 
+    theme(plot.title = element_text(hjust = 0.5, face = 'bold', size = 10),
+          panel.border = element_rect(color = 'black', fill=NA))
+})
+
+wrap_plots(p_list, design = lay, guides = 'collect') + 
+  plot_annotation(title = 'cNMF Module 12',
+                  theme = theme(plot.title = element_text(size = 18, hjust = .5, face = 'bold'))) 
+```
+
+
+
+
+```{r Fig.S20 plot, fig.height=8, fig.width=10}
+p_list <- lapply(1:length(levels(df_m13$orig.ident)), function(x){
+  df_sub <- df_m13[df_m13$orig.ident == levels(df_m13$orig.ident)[x],]
+  
+  ggplot(df_sub[order(df_sub$CellType2, decreasing = TRUE),], 
+         aes(UMAP_1, UMAP_2, color = CellType2)) + geom_point(size = .3) + 
+    theme_void() + 
+    scale_color_manual(values = pl_cols[[x]]) +
+    labs(title = levels(df_m13$orig.ident)[x]) + 
+    theme(plot.title = element_text(hjust = 0.5, face = 'bold', size = 10),
+          panel.border = element_rect(color = 'black', fill=NA))
+})
+
+wrap_plots(p_list, design = lay, guides = 'collect') + 
+  plot_annotation(title = 'cNMF Module 13',
+                  theme = theme(plot.title = element_text(size = 18, hjust = .5, face = 'bold'))) 
+```

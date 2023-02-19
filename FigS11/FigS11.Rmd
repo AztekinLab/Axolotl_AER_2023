@@ -1,0 +1,167 @@
+---
+title: "FigS11"
+author: "Jixing Zhong"
+date: "2/18/2023"
+output: html_document
+---
+
+```{r}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(ComplexHeatmap)
+library(RColorBrewer)
+library(patchwork)
+#remotes::install_github('jorvlan/raincloudplots')
+library(raincloudplots)
+source("/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/0.scripts/R_rainclouds.R")
+
+options(ggplot2.discrete.colour = "#A6D854")
+options(ggplot2.discrete.fill = "#A6D854")
+
+p_theme <- function() {
+    theme_bw() %+replace%
+        theme(
+            legend.position = "none",
+            axis.title.y = element_blank(),
+            axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+            axis.title.x = element_blank(),
+            plot.title = element_text(hjust = 0.5, face = "bold")
+        )
+}
+```
+
+```{r}
+df <- readRDS('/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/separate_metadata_reg.rds')
+df <- df[df$orig.ident == 'Axolotl_reg',]
+df$old.ident <- factor(df$old.ident, levels = c("control","3h", "24h","72h","7dpa" ,"14dpa"))
+
+CellNum <- as.data.frame(table(df$old.ident))
+colnames(CellNum) <- c('id', 'CellNum')
+```
+
+
+```{r, fig.height=8}
+p_cell <- ggplot(CellNum, aes(id, CellNum, fill = 'Axolotl_reg')) +
+    geom_bar(stat = "identity") +
+    ggtitle("Cell Numbers") +
+    p_theme()
+
+p_umi <- ggplot(df, aes(x = old.ident, y = nCount_RNA, fill = orig.ident)) +
+    geom_flat_violin(
+        position = position_nudge(x = 0, y = 0),
+        adjust = 2, trim = TRUE, scale = "width", color = NA, alpha = 0.7
+    ) +
+    geom_boxplot(
+        position = position_nudge(x = -.2, y = 0),
+        outlier.shape = NA, width = .2, lwd = .2,
+    ) +
+    ggtitle("Transcript numbers per cell") +
+    p_theme()
+
+p_gene <- ggplot(df, aes(x = old.ident, y = nFeature_RNA, fill = orig.ident)) +
+    geom_flat_violin(
+        position = position_nudge(x = 0, y = 0),
+        adjust = 2, trim = TRUE, scale = "width", color = NA, alpha = 0.7
+    ) +
+    geom_boxplot(
+        position = position_nudge(x = -.2, y = 0),
+        outlier.shape = NA, width = .2, lwd = .2,
+    ) +
+    ggtitle("Gene numbers per cell") +
+    p_theme()
+
+p_mito <- ggplot(df, aes(x = old.ident, y = percent.mt, fill = orig.ident)) +
+    geom_flat_violin(
+        position = position_nudge(x = 0, y = 0),
+        adjust = 2, trim = TRUE, scale = "width", color = NA, alpha = 0.7
+    ) +
+    geom_boxplot(
+        position = position_nudge(x = -.2, y = 0),
+        outlier.shape = NA, width = .2, lwd = .2,
+    ) +
+    ggtitle("Percentage of mitochodrial genes per cell") +
+    p_theme()
+
+
+wrap_plots(p_cell, p_umi, p_gene, p_mito, ncol = 1)
+
+```
+
+
+```{r, fig.width=15}
+cols2 <- c(
+    brewer.pal(9, "Paired")[c(1:3, 5, 6, 9)],
+    "#F0027F"
+)
+names(cols2) <- levels(df$CellType2)[1:7]
+
+p1 <- ggplot(df, aes(UMAP_1, UMAP_2, color = CellType2)) + geom_point(size = .3) + 
+  theme_classic() + scale_color_manual(values = cols2)
+
+
+p_list <- lapply(levels(df$old.ident), function(x) {
+  
+  dat <- df
+  dat$col <- as.character(dat$old.ident)
+  dat$col[dat$old.ident != x]  <- 'Unselected'
+  dat$col <- factor(dat$col, levels = c(x, 'Unselected'))
+  
+  cols <- c('#DE2D26', "lightgrey")
+  names(cols) <- c(x, 'Unselected')
+  
+  dat2 <- dat[order(dat$col, decreasing = T),]
+  
+  ggplot(dat2, aes(UMAP_1, UMAP_2, color = col)) + 
+    geom_point(size = .3) + theme_void() + 
+    scale_color_manual(values =  cols) +
+    labs(title = x) +
+    theme(plot.title = element_text(hjust = 0.5, size = 25),
+          legend.position = 'none'
+        ) + coord_fixed()
+})
+
+p2 <- wrap_plots(p_list, nrow = 2)
+
+wrap_plots(p1, p2)
+```
+
+
+```{r,, fig.width=15}
+mat <- readRDS('supp_heatmap.rds')
+
+ha <- HeatmapAnnotation(
+  CellType2 = df$CellType2[match(colnames(mat), rownames(df))],
+  col = list(CellType2 = cols2),
+  show_legend = FALSE
+)
+
+Heatmap(mat,
+  name = 'Expression',
+  show_column_names = FALSE,
+  row_names_side = 'left',
+  row_labels = gsub('\\.[0-9]+', '', rownames(mat)),
+  
+  column_split = factor(
+    df$CellType2[match(colnames(mat), rownames(df))],
+    levels = c(
+      'CT',
+      'BasalEctoderm',
+      'DiffEctoderm',
+      'AER',
+      'Muscle',
+      'Immune',
+      'Endo'
+    )
+  ),
+  top_annotation = ha,
+  
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  
+  col = circlize::colorRamp2(c(-2, 0, 2), c("#67a9cf", "white", "#b2182b")),
+  use_raster = TRUE,
+)
+
+```
+

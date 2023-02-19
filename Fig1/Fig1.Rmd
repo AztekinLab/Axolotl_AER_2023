@@ -1,0 +1,129 @@
+---
+title: "Fig.1"
+author: "Jixing Zhong"
+date: "2/1/2023"
+output: html_document
+---
+
+
+```{r, results='hold'}
+library(Seurat)
+library(ggplot2)
+library(RColorBrewer)
+library(patchwork)
+library(tidyr)
+library(ComplexHeatmap)
+library(ggtext)
+library(tidyverse)
+source("../0.scripts/dot_plot_combine_sp.r")
+```
+
+
+```{r Fig.1B-D prep}
+meta_data <- readRDS('/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/Fig1/meta_data.rds')
+
+cols2 <- c(
+    brewer.pal(12, "Paired")[c(1:10, 12)],
+    "#F0027F"
+)
+names(cols2) <- levels(meta_data$CellType2)
+
+
+cols <- c(
+    brewer.pal(12, "Paired")[c(1:6, 10, 12)]
+)
+names(cols) <- levels(meta_data$CellType)
+
+```
+
+
+```{r Fig. 1B-D plot, fig.width=15}
+p1 <- ggplot(meta_data, aes(UMAP_1, UMAP_2, color = CellType)) + geom_point() + 
+  theme_void() + scale_color_manual(values = cols)
+
+p2 <- ggplot(meta_data[meta_data$CellType == 'Ectoderm',], aes(UMAP_1, UMAP_2, color = CellType2)) + 
+  geom_point() + theme_void() + scale_color_manual(values = cols2)
+
+p3 <- ggplot(meta_data[meta_data$CellType2 == 'AER',], aes(UMAP_1, UMAP_2, color = sp)) + geom_point() + 
+  theme_void() + scale_color_brewer(palette = 'Set2')
+
+
+wrap_plots(p1, p2, p3, nrow = 1)
+
+```
+
+```{r Fig.1E , fig.width=10}
+total_mat <- readRDS('supp_dotplot.rds')
+gene2pathway <- readRDS('../gene2pathway.rds')
+
+genes <- names(gene2pathway)[gene2pathway == 'Marker_short']
+    total_mat_sub <- subset(total_mat, features.plot %in% genes)
+
+    idx <- str_order(unique(total_mat_sub$features.plot), numeric = T)
+    total_mat_sub$features.plot <- factor(total_mat_sub$features.plot,
+        levels = unique(total_mat_sub$features.plot)[idx]
+    )
+    p <- dot_plot(total_mat = total_mat_sub, x = features.plot, y = id2) +
+        theme(axis.text.y = element_markdown())
+p + labs(title = 'Marker_short')
+
+```
+
+
+```{r Fig.1F plot}
+AUROC.scores <- read.csv('../data/Fig1_data/AUROC_HVG_MN_303.csv', row.names = 1)
+source('/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/pl_MN_utils.r')
+
+plot_AUROC_heatmap(AUROC.scores)
+```
+
+
+```{r Fig.1G plot, fig.height=3}
+df <- readRDS("../data/Fig1_data/AUCell_scores.rds")
+df <- df[df$CellType2 != "Delected", ]
+df_mean <- df %>%
+  group_by(sp, CellType2) %>%
+  summarise(mean = mean(sig))
+
+df_mean_wide <- spread(df_mean, key = sp, value = mean)
+rn <- df_mean_wide$CellType2
+df_mean_wide <- df_mean_wide[, -1]
+
+
+ComplexHeatmap::pheatmap(df_mean_wide[rn %in% c("AER", "BasalEctoderm"), ],
+                         name = 'Enrichment score',
+  cluster_rows = FALSE, cluster_cols = FALSE,
+  labels_row = rn[rn %in% c("AER", "BasalEctoderm")],
+  colorRampPalette(c("white", "firebrick3"))(10),
+  na_col = "grey"
+)
+
+
+```
+```{r}
+p1 <- ComplexHeatmap::pheatmap(df_mean_wide,
+                         name = 'Enrichment score',
+  cluster_rows = FALSE, cluster_cols = FALSE,
+  labels_row = rn,
+  colorRampPalette(c("white", "firebrick3"))(10),
+  na_col = "grey"
+)
+
+na_idx <- is.na(df_mean_wide)
+df_mean_wide[na_idx] <- 0
+
+# normalize
+df_mean_wide_norm <- apply(df_mean_wide, 2, function(x) x / max(x))
+df_mean_wide_norm[na_idx] <- NA
+
+p2 <- ComplexHeatmap::pheatmap(df_mean_wide_norm,
+                         name = 'Normalized enrichment score',
+  cluster_rows = FALSE, cluster_cols = FALSE,
+  labels_row = rn, colorRampPalette(c("white", "firebrick3"))(10),
+  na_col = "grey"
+)
+
+p1 %v% p2
+
+```
+

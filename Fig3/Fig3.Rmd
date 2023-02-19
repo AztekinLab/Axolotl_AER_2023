@@ -1,0 +1,142 @@
+---
+title: "Fig.3"
+author: "Jixing Zhong"
+date: "2/1/2023"
+output: html_document
+---
+
+```{r}
+library(Seurat)
+library(ComplexHeatmap)
+library(ggplot2)
+library(RColorBrewer)
+library(patchwork)
+```
+
+
+
+```{r Fig.3B-C prep}
+df <- readRDS('supervised_clustering_umap.rds')
+```
+
+
+```{r Fig.3B-C plot, fig.height=8, fig.width=10}
+dev <- c("#A6CEE3", "#F0027F")
+reg <- c("#1a5e82", "#a20559")
+pl_cols <-c(
+  rep(list(dev),5), 
+  rep(list(reg),2)
+)
+
+selected <- c("Mouse_E105", "Human_CS13", "Chicken_E45", "Axolotl_ST52", "Frog_NF51","Axolotl_reg" ,"Frog_reg" )
+
+p_list <- lapply(1:length(selected), function(x){
+  df_sub <- df[df$orig.ident == selected[x],]
+  
+  ggplot(df_sub[order(df_sub$CellType2, decreasing = FALSE),], 
+         aes(UMAP_1, UMAP_2, color = CellType2)) + geom_point() + 
+  theme_classic() + scale_color_manual(values = pl_cols[[x]]) +
+    labs(title = x)
+})
+
+
+lay <- '
+ABC
+DE#
+FG#'
+
+wrap_plots(p_list, design = lay, guides = 'collect')
+```
+
+
+```{r, fig.width=8, fig.height=8}
+load('./heatmap_supp.rdata')
+
+ha <- HeatmapAnnotation(
+    CellType2 = as.character(anno[colnames(z_wide)]),
+    col = list(CellType2 = c("AER" = "#a20559", "CT" = "#1a5e82", "CT-AER" = "#1a5e82")),
+    show_legend = FALSE, show_annotation_name = FALSE
+)
+
+p <- Heatmap(z_wide,
+    name = 'Expression',
+    show_column_names = FALSE, 
+    
+    column_split = as.character(anno[colnames(z_wide)]),
+    column_title = NULL,
+    top_annotation = ha,
+    
+    # show_row_names = FALSE,
+    row_labels = gsub('\\.[0-9]+','',stringr::str_to_title(rownames(z_wide))),
+    row_names_gp = gpar(fontsize = 5),
+    cluster_rows = FALSE,
+    
+    clustering_distance_columns = "euclidean",
+    clustering_method_columns = "ward.D2",
+    column_dend_reorder = TRUE,
+
+    col = circlize::colorRamp2(c(-3, 0, 3), c("#2166ac", "white", "#b2182b")),
+    use_raster = TRUE
+)
+p
+
+```
+
+
+
+```{r Fig.3E-G prep}
+sc <- readRDS('/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/Fig3/Fig3_supp.rds')
+vis <- readRDS('../data/axolotl_visium_anno.rds')
+
+cols2 <- c(
+  brewer.pal(3, "Paired"),
+  brewer.pal(3, "Dark2"),
+  "#F0027F"
+)
+names(cols2) <- levels(vis$CellType2)
+
+```
+
+```{r Fig.3E-G plot1}
+genes <- c('KRT5.2','KRT17','LUM','DPT')
+p_sc <- lapply(genes, function(i){
+  
+  dat <- sc[,c('UMAP_1', 'UMAP_2')]
+  dat$Exp <- c(sc[,i])
+  ggplot(dat[order(dat$Exp, decreasing = FALSE),], 
+         aes(UMAP_1, UMAP_2, color = Exp)) + geom_point() + 
+  theme_void() + scale_color_gradient(low = 'lightgrey', high = '#B2182B') +
+    labs(title = i)
+})
+
+p_sc <- wrap_plots(p_sc, ncol = 1)
+
+
+genes <- c('KRT5.2','KRT17.1','LUM.1','DPT')
+p_vis <- lapply(genes, function(i){
+  p1 <- SpatialFeaturePlot(vis, features = i, image.alpha = 0) +
+    scale_fill_gradientn(colours = rev(brewer.pal(9, "RdBu"))) +
+    theme(
+      aspect.ratio = 1 / 2,
+      legend.position = "right"
+    )
+  p2 <- VlnPlot(vis, i,
+                group.by = "CellType2",
+                idents = c("CT", "Blastema", "AEC"),
+                pt.size = 0,
+                cols = cols2
+  ) + NoLegend() + 
+    theme(aspect.ratio = 1, plot.title = element_blank())
+  
+  wrap_plots(p1, p2, nrow = 1, widths = c(2, 1))
+  
+})
+
+p_vis <- wrap_plots(p_vis, ncol = 1)
+```
+
+```{r Fig.3E-G plot2, fig.dim=c(12, 9)}
+
+wrap_plots(p_sc, p_vis, nrow = 1, widths = c(1, 2))
+
+```

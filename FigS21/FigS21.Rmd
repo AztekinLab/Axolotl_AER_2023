@@ -1,0 +1,70 @@
+---
+title: "FigS21"
+author: "Jixing Zhong"
+date: "2/19/2023"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(patchwork)
+source('../0.scripts/dotplot_fromTOM.r')
+
+meta_df <- readRDS('supp_S21.rds')
+load('supp_dotplot.rdata')
+
+```
+
+```{r, fig.height=8}
+p1 <- ggplot(meta_df, aes(UMAP_1, UMAP_2, color = comp)) + geom_point(size = .3) + 
+  theme_void() + scale_color_manual(values = c("AER" = "#a20559", "CT" = "#1a5e82", "CT-AER" = "#669017"))
+
+p2 <- dotplot(as.matrix(countn),
+        norm = "max",
+        condition = condition,
+        title = 'Signalling ligands',
+        collow = "lightgrey", colhigh = "red3",
+        aspect.ratio = 8, ySize = 8, xSize = 8, dot.scale = 3.5,
+        return = TRUE, plot = FALSE
+    )
+
+p1 / p2
+
+```
+
+```{r}
+p1 <- ggplot(meta_df, aes(UMAP_1, UMAP_2, color = VWDE)) + geom_point(size = .3) + 
+  theme_classic() + scale_color_gradient(low = 'lightgrey', high = '#B2182B')
+
+p2 <- ggplot(meta_df, aes(UMAP_1, UMAP_2, color = MDK)) + geom_point(size = .3) + 
+  theme_classic() + scale_color_gradient(low = 'lightgrey', high = '#B2182B')
+
+p3 <- ggplot(meta_df, aes(UMAP_1, UMAP_2, color = KRT18)) + geom_point(size = .3) + 
+  theme_classic() + scale_color_gradient(low = 'lightgrey', high = '#B2182B')
+
+wrap_plots(p1, p2, p3, ncol = 2)
+
+```
+
+```{r}
+p_list <- lapply(levels(meta_df$dpa), function(x) {
+  
+  dat <- meta_df
+  dat$col <- as.character(dat$dpa)
+  dat$col[dat$dpa != x]  <- 'Unselected'
+  dat$col <- factor(dat$col, levels = c(x, 'Unselected'))
+  
+  color <-  c('#DE2D26',"lightgrey")
+  names(color) <- c(x, 'Unselected')
+
+  
+    ggplot(dat[order(dat$col, decreasing = TRUE),], aes(UMAP_1, UMAP_2, color = col)) + 
+    geom_point(size = .3) + theme_void() + scale_color_manual(values = color) +
+    labs(title = x) +
+    theme(plot.title = element_text(hjust = 0.5, size = 10),
+          legend.position = 'none')
+})
+
+wrap_plots(p_list)
+```
+

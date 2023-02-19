@@ -1,0 +1,33 @@
+---
+title: "FigS12"
+author: "Jixing Zhong"
+date: "2/19/2023"
+output: html_document
+---
+
+```{r }
+source("../0.scripts/vocalno_plot.r")
+markers <- read.table('AER_vs_AEC_full.txt')
+```
+
+```{r, fig.width=10, fig.height=10}
+
+label_top <- subset(markers, p_val_adj < 0.05) %>%
+    group_by(cluster) %>%
+    top_n(10, abs(avg_log2FC))
+label_top <- c(label_top$gene, "MMP13.1")
+
+
+volcano_plot(markers,
+    logFC_threshold = 0.25, padj_threshold = 0.05,
+    label_up = "AER", label_down = "AEC", label_no = "Not Sig.",
+    col_up = "#BC3C28", col_down = "#0072B5", col_no = "lightgrey",
+    title = "AER vs AEC",
+    xtitle = "log(FoldChange)", ytitle = "-log10(Adjust P-value)",
+    ytext_size = 10, xtext_size = 10, ytitle_size = 10, xtitle_size = 10,
+    label_top = label_top, label_size = 4, dot_size = 1, box.padding = 0.5,
+    return_p = TRUE
+)
+
+```
+

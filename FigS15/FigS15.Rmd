@@ -1,0 +1,95 @@
+---
+title: "FigS15"
+author: "Jixing Zhong"
+date: "2/18/2023"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(ggrepel)
+
+df_dev <- readRDS('../separate_metadata_dev.rds')
+idx <- df_dev$CellType2 == "AER" & df_dev$orig.ident %in% c("Axolotl_ST50", "Axolotl_ST52", "Axolotl_ST54")
+df_dev$CellType2_sep[idx] <- "AER"
+
+df_reg <- readRDS('../separate_metadata_reg.rds')
+df_reg$old.ident <- df_reg$orig.ident
+
+df <- rbind(df_dev, df_reg)
+df <- df[df$CellType2_sep %in% c('CT','AER'),]
+
+lay <- '
+LHCA
+MIDB
+NJEG
+#KF#
+OP##
+'
+
+
+```
+
+
+```{r Fig.S15, fig.height=10, fig.width=15}
+n <- unique(df$old.ident)
+p_list <- lapply(1:length(n), function(x) {
+  
+  dat <- df[df$old.ident == levels(df$old.ident)[x], ]
+  
+  thr <- dat$Threshold_AER_DEG_top200[1]
+  dat$passed <- as.character(dat$aucell_AER_DEG_top200 > thr)
+  
+  dat$aucell_AER_DEG_top200[dat$passed == "FALSE"] <- NA
+  
+  dat$size <- 2
+  dat$size[dat$passed == "FALSE"] <- 1
+  
+  # get label position
+  umap.cent <- dat %>%
+    group_by(CellType2_sep) %>%
+    select(UMAP_1, UMAP_2) %>%
+    summarize_all(mean)
+  
+  # plot
+  p <- ggplot(dat %>% arrange(passed), aes(x = UMAP_1, y = UMAP_2)) +
+    geom_point(
+      aes(
+        size = size,
+        fill = aucell_AER_DEG_top200,
+        color = passed
+      ),
+      stroke = .05,
+      shape = 21
+    ) +
+    scale_size(range = c(.3, .5)) +
+    scale_fill_gradient2(
+      high = "#B2182B",
+      mid = "#D71D33",
+      low = "lightgrey",
+      na.value = "lightgrey",
+      midpoint = mean(na.omit(dat$aucell_AER_DEG_top200)),
+      name = "Enrichment score"
+    ) +
+    scale_color_manual(values = c("TRUE" = "black", "FALSE" = "lightgrey")) +
+    geom_text_repel(data = umap.cent, aes(label = CellType2_sep)) +
+    guides(color = "none", size = "none") +
+    labs(title = levels(df$old.ident)[x]) +
+    theme_void() +
+    theme(plot.title = element_text(hjust = .5, face = "bold"),
+          panel.border = element_rect(color = 'black', fill=NA),
+          legend.key.size = unit(.2, 'cm'))
+  
+  
+})
+
+wrap_plots(p_list, design = lay) +
+  plot_annotation(title = 'AER DEGs',
+                  theme = theme(plot.title = element_text(
+                    size = 18, hjust = .5, face = 'bold'
+                  ))) 
+```
+
+

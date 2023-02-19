@@ -1,0 +1,132 @@
+---
+title: "FigS13"
+author: "Jixing Zhong"
+date: "2/18/2023"
+output: html_document
+---
+
+```{r}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(patchwork)
+#remotes::install_github('jorvlan/raincloudplots')
+library(raincloudplots)
+source("/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/0.scripts/R_rainclouds.R")
+
+options(ggplot2.discrete.colour = "#A6D854")
+options(ggplot2.discrete.fill = "#A6D854")
+
+p_theme <- function() {
+    theme_bw() %+replace%
+        theme(
+            legend.position = "none",
+            axis.title.y = element_blank(),
+            axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+            axis.title.x = element_blank(),
+            plot.title = element_text(hjust = 0.5, face = "bold")
+        )
+}
+```
+
+```{r}
+vis <- readRDS('../data/axolotl_visium_anno.rds')
+
+CellNum <- data.frame(
+    CellNum = ncol(vis),
+    Species = "Axoltol",
+    id = vis$orig.ident[1]
+)
+
+df <- vis[[]]
+```
+
+
+```{r}
+p_cell <- ggplot(CellNum, aes(id, CellNum, fill = id)) +
+    geom_bar(stat = "identity") +
+    ggtitle("Cell Numbers") +
+    p_theme()
+
+p_umi <- ggplot(df, aes(x = orig.ident, y = nCount_Spatial, fill = orig.ident)) +
+    geom_flat_violin(
+        position = position_nudge(x = 0, y = 0),
+        adjust = 2, trim = TRUE, scale = "width", color = NA, alpha = 0.7
+    ) +
+    geom_boxplot(
+        position = position_nudge(x = -.2, y = 0),
+        outlier.shape = NA, width = .2, lwd = .2,
+    ) +
+    ggtitle("Transcript numbers per cell") +
+    p_theme()
+
+p_gene <- ggplot(df, aes(x = orig.ident, y = nFeature_Spatial, fill = orig.ident)) +
+    geom_flat_violin(
+        position = position_nudge(x = 0, y = 0),
+        adjust = 2, trim = TRUE, scale = "width", color = NA, alpha = 0.7
+    ) +
+    geom_boxplot(
+        position = position_nudge(x = -.2, y = 0),
+        outlier.shape = NA, width = .2, lwd = .2,
+    ) +
+    ggtitle("Gene numbers per cell") +
+    p_theme()
+
+p_mito <- ggplot(df, aes(x = orig.ident, y = percent.mt, fill = orig.ident)) +
+    geom_flat_violin(
+        position = position_nudge(x = 0, y = 0),
+        adjust = 2, trim = TRUE, scale = "width", color = NA, alpha = 0.7
+    ) +
+    geom_boxplot(
+        position = position_nudge(x = -.2, y = 0),
+        outlier.shape = NA, width = .2, lwd = .2,
+    ) +
+    ggtitle("Percentage of mitochodrial genes per cell") +
+    p_theme()
+
+
+wrap_plots(p_cell, p_umi, p_gene, p_mito, ncol = 2)
+
+```
+
+
+```{r, fig.width=10}
+cols2 <- c(
+  brewer.pal(3, "Paired"),
+  brewer.pal(3, "Dark2"),
+  "#F0027F"
+)
+names(cols2) <- levels(vis$CellType2)
+
+p1 <- DimPlot(vis,
+  group.by = "CellType2",
+  label = TRUE, cols = cols2
+) + NoLegend()
+
+p2 <- SpatialDimPlot(vis,
+  group.by = "CellType2",
+  label = TRUE
+) + scale_fill_manual(values = cols2) +
+  NoLegend() +
+  theme(aspect.ratio = 1 / 2)
+
+wrap_plots(p1, p2, widths = c(1, 2))
+```
+
+```{r}
+top20 <- c("SFRP2","DCN","MFAP4.1","PTX3","HBG2.2","GLNC1","HBZ.3","CTSS","HBD","HBG1","CTSV","HBG2.4","HB-AM","MBP","PMP22","MPZ","ITLN1.1","TMSB15A","KRT8.2","KRT8.1","KRT15.7","RRBP1.1","KRT5.4","KRT5","KRT12.1","EOD39-21475.1","FABP3","AHNAK.5","KRT12.8","PRPH","S100P.1","KRT15.8","CKM","ACTC1.3","ACTC1.2","ATP2A1","TNNT3","TNNC2","MYL1","MYLPF","MYH2.3","TPM1","ALDOA","SLN","TNNI2","ACTC1","MYBPC2","PVALB.3","PVALB","MYH2","KAZALD1","APOE","VIM","AXRNBP" ,"TNC.1","LYZ","CKB","PLBD1.1","CYCS.1","CSTB","ATP6V0C","CTSK","MMP1.1", "ANKRD1.1","FBLN7","MATN4.S","HAPLN1","EPYC","ACAN","COL9A1","COL9A3","CYTL1","COL9A2","CNMD","C17ORF67","COL11A1","COL2A1","UCMA","OTOS","MATN1","CEEL","NKAPD1","KRT4.1","FCGBP.7","FCGBP.8","AVD","KRT17.1","KRT5.2","DSP","KRT12.4","KRT12.6","FABP2","TGM6.6","WFDC8","UMOD.9") 
+
+DoHeatmap(vis,
+  features = top20,
+  group.by = "CellType2", group.colors = cols2,
+  raster = FALSE
+) + scale_fill_gradient2(
+  low = rev(c("#d1e5f0", "#67a9cf", "#2166ac")),
+  mid = "white",
+  high = rev(c("#b2182b", "#ef8a62", "#fddbc7")),
+  midpoint = 0, guide = "colourbar", aesthetics = "fill"
+)
+
+```
+

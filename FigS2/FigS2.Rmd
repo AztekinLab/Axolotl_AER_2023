@@ -1,0 +1,72 @@
+---
+title: "FigS2"
+author: "Jixing Zhong"
+date: "2/17/2023"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+library(patchwork)
+library(tidyr)
+source("/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/0.scripts/R_rainclouds.R")
+```
+
+
+```{r}
+df <- readRDS('/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/separate_metadata_dev.rds')
+```
+
+
+```{r, fig.height=20, fig.width=15}
+
+le2 <- c(
+    "CT",
+    "BasalEctoderm",
+    "Muscle",
+    "Blood",
+    "Immune",
+    "Endo",
+    "Epithelium",
+    "Goblet",
+    "DiffEctoderm",
+    "Pericyte",
+    "Schwann",
+    "Ionocyte",
+    "Neuron",
+    "NeuralCrest",
+    "Endo_Blood",
+    "AER",
+    "Immune_Blood",
+    "Unknown"
+)
+
+cols2 <- c(
+    brewer.pal(12, "Paired")[c(1:10, 12)],
+    brewer.pal(3, "Dark2")[1:2],
+    "#F27507", "#CB5081", "#F0027F", "#CED9A9", "grey"
+)
+
+names(cols2) <- le2
+
+
+p_list <- lapply(sort(unique(df$old.ident)), function(x){
+  
+  df_sub <- df[df$old.ident == x,]
+  ggplot(df_sub, aes(UMAP_1, UMAP_2, color = CellType2_sep)) + 
+    geom_point(size = .3) + 
+  theme_classic() + scale_color_manual(values = cols2) +labs(title = x) +
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+})
+ 
+lay <- '
+ABG
+CHL
+DIM
+EJN
+FK#
+'
+wrap_plots(p_list, design = lay, guides = 'collect')
+
+```

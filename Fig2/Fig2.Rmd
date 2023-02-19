@@ -1,0 +1,193 @@
+---
+title: "Fig.2"
+author: "Jixing Zhong"
+date: "2/1/2023"
+output: html_document
+---
+
+```{r, results='hold'}
+library(Seurat)
+library(ggplot2)
+library(RColorBrewer)
+library(patchwork)
+```
+
+```{r}
+meta <- readRDS('Fig2_meta.rds')
+cols2 <- c(
+    "#1F78B4", "#F0027F"
+)
+names(cols2) <- levels(meta$CellType2)
+```
+
+
+```{r Fig.2B plot}
+ggplot(meta, aes(UMAP_1, UMAP_2, color = CellType2)) + geom_point() + 
+  theme_classic() + scale_color_manual(values = cols2)
+
+```
+
+
+```{r Fig.2C plot}
+
+meta_AER <- meta[meta$CellType2 == 'AER',]
+
+p_list <- lapply(levels(meta_AER$dpa), function(x) {
+  
+  dat <- meta_AER
+  dat$col <- as.character(dat$dpa)
+  dat$col[dat$dpa != x]  <- 'Unselected'
+  dat$col <- factor(dat$col, levels = c(x, 'Unselected'))
+  
+  color <-  c('#DE2D26',"lightgrey")
+  names(color) <- c(x, 'Unselected')
+
+  
+    ggplot(dat[order(dat$col, decreasing = TRUE),], aes(UMAP_1, UMAP_2, color = col)) + 
+    geom_point() + theme_classic() + scale_color_manual(values = color) +
+    labs(title = x) +
+    theme(plot.title = element_text(hjust = 0.5, size = 10),
+          legend.position = 'none') + coord_fixed()
+})
+
+
+wrap_plots(p_list)
+
+```
+
+
+
+
+```{r Fig.2D,E plot}
+## genelist
+load('Fig2_supp.rdata')
+source('../0.scripts/dotplot_fromTOM.r')
+#save(countn, condition, markers, sigs, countn_vis, condition_vis, file = 'Fig2_supp.rdata')
+
+```
+
+```{r, fig.width=10, fig.height=10}
+p_marker <- dotplot(countn,
+    genes = markers,
+    norm = "max",
+    conditionList = levels(condition)[c(1:3, 7:9)],
+    condition = condition, 
+    title = "AER markers",
+    collow = "lightgrey", colhigh = "red3",
+    aspect.ratio = 3, ySize = 8, xSize = 8, dot.scale = 3.5,
+    return = TRUE, plot = FALSE
+)
+
+
+p_sigs <- dotplot(countn,
+    genes = sigs,
+    norm = "max",
+    conditionList = levels(condition)[c(1:3, 7:9)],
+    condition = condition, 
+    title = "Signalling ligands",
+    collow = "lightgrey", colhigh = "red3",
+    aspect.ratio = 4.5, ySize = 8, xSize = 8, dot.scale = 4,
+    return = TRUE, plot = FALSE
+)
+
+
+## add VISIUM dataset
+p_marker_vis <- dotplot(countn_vis,
+    genes = markers,
+    norm = "max",
+    conditionList = unique(condition_vis),
+    condition = condition_vis,
+    condition_plot = "AEC",
+    title = "Visium",
+    collow = "lightgrey", colhigh = "red3",
+    aspect.ratio = 8, ySize = 8, xSize = 8, dot.scale = 3.5,
+    return = TRUE, plot = FALSE
+)
+
+p_sigs_vis <- dotplot(countn_vis,
+    genes = sigs,
+    norm = "max",
+    conditionList = unique(condition_vis),
+    condition = condition_vis,
+    condition_plot = "AEC",
+    title = "Visium",
+    collow = "lightgrey", colhigh = "red3",
+    aspect.ratio = 14, ySize = 8, xSize = 8, dot.scale = 4,
+    return = TRUE, plot = FALSE
+)
+
+
+wrap_plots(p_marker, p_marker_vis, p_sigs, p_sigs_vis, nrow = 1, guides = "collect")
+
+
+```
+```{r}
+## statistic test
+
+AER <- BE[, BE$CellType2 == "AER"]
+res_list <- lapply(sigs, function(i) {
+    res <- wilcox.test(
+        AER@assays$RNA@data[i, AER$comp == "dev"],
+        AER@assays$RNA@data[i, AER$comp == "reg"]
+    )
+    res$p.value
+})
+res <- unlist(res_list)
+names(res) <- sigs
+res <- na.omit(res)
+res_adj <- p.adjust(res, method = "BH")
+res_adj_sig <- data.frame(adj_p_val = res_adj[res_adj < 0.05])
+write.table(res_adj_sig, "DE_sigs.txt", quote = FALSE, sep = "\t", row.names = TRUE)
+
+res_list <- lapply(markers, function(i) {
+    res <- wilcox.test(
+        AER@assays$RNA@data[i, AER$comp == "dev"],
+        AER@assays$RNA@data[i, AER$comp == "reg"]
+    )
+    res$p.value
+})
+res <- unlist(res_list)
+names(res) <- markers
+res <- na.omit(res)
+res_adj <- p.adjust(res, method = "BH")
+res_adj_sig <- data.frame(adj_p_val = res_adj[res_adj < 0.05])
+
+write.table(res_adj_sig, "DE_mars.txt", quote = FALSE, sep = "\t", row.names = TRUE)
+
+
+```
+
+
+```{r Fig.2G plot}
+vis <- readRDS('../data/axolotl_visium_anno.rds')
+
+cols_ <- c(rep("lightgrey", 3), "#1B9E77", rep("lightgrey", 2), "#F0027F")
+names(cols_) <- levels(vis$CellType2)
+
+SpatialDimPlot(vis,
+  label = TRUE,
+  cols = cols_,
+  image.alpha = 0
+) + NoLegend() + theme(aspect.ratio = 1 / 2)
+
+
+```
+
+```{r Fig.2H plot}
+col <- rev(brewer.pal(9, "RdBu"))
+genes <- c("KRT17.1", "FN1", "MSX2", "KAZALD1")
+
+p_list <- lapply(genes, function(x) {
+  SpatialFeaturePlot(vis, features = x, image.alpha = 0) +
+    scale_fill_gradientn(colours = col) +
+    theme(
+      aspect.ratio = 1 / 2,
+      legend.position = "right",
+      plot.margin = margin(0, 0, 0, 0, "cm"),
+      legend.key.size = unit(.3, "cm")
+    )
+})
+
+wrap_plots(p_list)
+```
+

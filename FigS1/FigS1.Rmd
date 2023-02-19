@@ -1,0 +1,87 @@
+---
+title: "FigS1"
+author: "Jixing Zhong"
+date: "2/17/2023"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+library(stringr)
+library(patchwork)
+library(dplyr)
+library(Seurat)
+#remotes::install_github('jorvlan/raincloudplots')
+library(raincloudplots)
+source("/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/0.scripts/R_rainclouds.R")
+
+options(ggplot2.discrete.colour = brewer.pal(5, "Set2"))
+options(ggplot2.discrete.fill = brewer.pal(5, "Set2"))
+
+p_theme <- function() {
+    theme_bw() %+replace%
+        theme(
+            legend.position = "none",
+            axis.title.y = element_blank(),
+            axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+            axis.title.x = element_blank(),
+            plot.title = element_text(hjust = 0.5, face = "bold")
+        )
+}
+
+```
+
+
+```{r}
+df <- readRDS('/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/separate_metadata_dev.rds')
+CellNum <- readRDS('CellNum.rds')
+```
+
+
+```{r, fig.height=10}
+p_cell <- ggplot(CellNum, aes(id, CellNum, fill = Species)) +
+    geom_bar(stat = "identity") +
+    ggtitle("Cell Numbers") +
+    p_theme()
+
+p_umi <- ggplot(df, aes(x = old.ident, y = nCount_RNA, fill = sp)) +
+    geom_flat_violin(
+        position = position_nudge(x = 0, y = 0),
+        adjust = 2, trim = TRUE, scale = "width", color = NA, alpha = 0.7
+    ) +
+    geom_boxplot(
+        position = position_nudge(x = -.2, y = 0),
+        outlier.shape = NA, width = .2, lwd = .2,
+    ) +
+    ggtitle("Transcript numbers per cell") +
+    p_theme()
+
+p_gene <- ggplot(df, aes(x = old.ident, y = nFeature_RNA, fill = sp)) +
+    geom_flat_violin(
+        position = position_nudge(x = 0, y = 0),
+        adjust = 2, trim = TRUE, scale = "width", color = NA, alpha = 0.7
+    ) +
+    geom_boxplot(
+        position = position_nudge(x = -.2, y = 0),
+        outlier.shape = NA, width = .2, lwd = .2,
+    ) +
+    ggtitle("Gene numbers per cell") +
+    p_theme()
+
+p_mito <- ggplot(df, aes(x = old.ident, y = percent.mt, fill = sp)) +
+    geom_flat_violin(
+        position = position_nudge(x = 0, y = 0),
+        adjust = 2, trim = TRUE, scale = "width", color = NA, alpha = 0.7
+    ) +
+    geom_boxplot(
+        position = position_nudge(x = -.2, y = 0),
+        outlier.shape = NA, width = .2, lwd = .2,
+    ) +
+    ggtitle("Percentage of mitochodrial genes per cell") +
+    p_theme()
+
+
+wrap_plots(p_cell, p_umi, p_gene, p_mito, ncol = 1)
+
+```

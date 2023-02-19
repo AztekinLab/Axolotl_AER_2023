@@ -1,0 +1,37 @@
+---
+title: "FigS5"
+author: "Jixing Zhong"
+date: "2/18/2023"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(patchwork)
+library(ggtext)
+source("../0.scripts/dot_plot_combine_sp.r")
+```
+
+```{r}
+total_mat <- readRDS('../Fig1/supp_dotplot.rds')
+gene2pathway <- readRDS('../gene2pathway.rds')
+```
+
+```{r, fig.width=15}
+genes <- names(gene2pathway)[gene2pathway == "Marker"]
+total_mat_sub <- subset(total_mat, features.plot %in% genes)
+
+idx <-
+  stringr::str_order(unique(total_mat_sub$features.plot), numeric = TRUE)
+total_mat_sub$features.plot <-
+  factor(total_mat_sub$features.plot,
+         levels = unique(total_mat_sub$features.plot)[idx])
+p <-
+  dot_plot(total_mat = total_mat_sub, x = features.plot, y = id2) +
+  theme(axis.text.y = element_markdown())
+
+p + labs(title = "Marker")
+
+
+```
+

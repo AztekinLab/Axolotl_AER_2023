@@ -1,0 +1,17 @@
+---
+title: "FigS6"
+author: "Jixing Zhong"
+date: "2/19/2023"
+output: html_document
+---
+
+```{r}
+source('/Users/jzhong/Desktop/Desktop–SV-96M-002/EPFL/project/axolotl_aer_final/rmd_pl_figs/pl_MN_utils.r')
+
+AUROC.scores_hvg <- read.csv('../FigS6/AUROC_HVG_Seurat_3000.csv', row.names = 1)
+AUROC.scores_pca <- read.csv('../FigS6/AUROC_PCA_50.csv', row.names = 1)
+
+plot_AUROC_heatmap(AUROC.scores_hvg)
+plot_AUROC_heatmap(AUROC.scores_pca)
+```
+

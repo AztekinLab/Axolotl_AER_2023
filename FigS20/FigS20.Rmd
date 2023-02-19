@@ -6,6 +6,56 @@ output: html_document
 ---
 
 ```{r}
+library(ComplexHeatmap)
+library(patchwork)
+
+meta_df_dev <- readRDS('../separate_metadata_dev.rds')
+meta_df_reg <- readRDS('../separate_metadata_reg.rds')
+meta_df <- rbind(meta_df_dev, meta_df_reg)
+
+mat_list <- readRDS('FigS20_mat_list.rds')
 
 ```
 
+```{r}
+# this chunk may take a few minutes
+p_list <- lapply(names(mat_list), function(x){
+  print(x)
+  mat <- mat_list[[x]]
+  
+  meta_df_sub <- meta_df[meta_df$orig.ident == x & (meta_df$CellType2 %in% c('AER','CT')),]
+  celltype <- as.character(meta_df_sub$CellType2[match(colnames(mat), rownames(meta_df_sub))])
+  
+   ha <- HeatmapAnnotation(
+        CellType2 = celltype,
+        col = list(CellType2 = c("AER" = "#F0027F", "CT" = "#A6CEE3")),
+        show_annotation_name = FALSE
+    )
+
+    p <- Heatmap(mat,
+        name = 'Expression',
+        column_title = x,
+        show_column_names = FALSE, 
+        show_row_names = FALSE,
+        column_split = celltype,
+        top_annotation = ha,
+
+        # cluster_rows = FALSE,
+        clustering_distance_rows = "euclidean",
+        clustering_method_rows = "ward.D2",
+        clustering_distance_columns = "euclidean",
+        clustering_method_columns = "ward.D2",
+        row_dend_reorder = TRUE,
+        column_dend_reorder = TRUE,
+        show_row_dend = FALSE,
+        col = circlize::colorRamp2(c(-3, 0, 3), c("#2166ac", "white", "#b2182b")),
+        use_raster = TRUE
+    )
+    
+    grid.grabExpr(draw(p)) 
+})
+```
+
+```{r, fig.width=15, fig.height=10}
+wrap_plots(p_list, guides = 'collect')
+```

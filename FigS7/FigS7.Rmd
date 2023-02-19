@@ -1,0 +1,51 @@
+---
+title: "FigS7"
+author: "Jixing Zhong"
+date: "2/19/2023"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ComplexHeatmap)
+
+df <- readRDS("../data/Fig1_data/AUCell_scores.rds")
+df <- df[df$CellType2 != "Delected", ]
+
+df_mean <- df %>%
+  group_by(sp, CellType2) %>%
+  summarise(mean = mean(sig))
+
+df_mean_wide <- spread(df_mean, key = sp, value = mean)
+rn <- df_mean_wide$CellType2
+df_mean_wide <- df_mean_wide[, -1]
+
+```
+
+```{r}
+p1 <- ComplexHeatmap::pheatmap(df_mean_wide,
+                         name = 'Enrichment score',
+  cluster_rows = FALSE, cluster_cols = FALSE,
+  labels_row = rn,
+  colorRampPalette(c("white", "firebrick3"))(10),
+  na_col = "grey"
+)
+
+na_idx <- is.na(df_mean_wide)
+df_mean_wide[na_idx] <- 0
+
+# normalize
+df_mean_wide_norm <- apply(df_mean_wide, 2, function(x) x / max(x))
+df_mean_wide_norm[na_idx] <- NA
+
+p2 <- ComplexHeatmap::pheatmap(df_mean_wide_norm,
+                         name = 'Normalized enrichment score',
+  cluster_rows = FALSE, cluster_cols = FALSE,
+  labels_row = rn, colorRampPalette(c("white", "firebrick3"))(10),
+  na_col = "grey"
+)
+
+p1 %v% p2
+
+```

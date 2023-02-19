@@ -123,38 +123,39 @@ wrap_plots(p_marker, p_marker_vis, p_sigs, p_sigs_vis, nrow = 1, guides = "colle
 ```
 ```{r}
 ## statistic test
+comp <- rep('reg', length(condition))
+comp[grep('Axolotl', condition)] <- 'dev'
 
-AER <- BE[, BE$CellType2 == "AER"]
-res_list <- lapply(sigs, function(i) {
-    res <- wilcox.test(
-        AER@assays$RNA@data[i, AER$comp == "dev"],
-        AER@assays$RNA@data[i, AER$comp == "reg"]
-    )
-    res$p.value
-})
-res <- unlist(res_list)
-names(res) <- sigs
-res <- na.omit(res)
-res_adj <- p.adjust(res, method = "BH")
-res_adj_sig <- data.frame(adj_p_val = res_adj[res_adj < 0.05])
-write.table(res_adj_sig, "DE_sigs.txt", quote = FALSE, sep = "\t", row.names = TRUE)
-
+# markers
 res_list <- lapply(markers, function(i) {
     res <- wilcox.test(
-        AER@assays$RNA@data[i, AER$comp == "dev"],
-        AER@assays$RNA@data[i, AER$comp == "reg"]
+        countn[i, comp == "dev"],
+        countn[i, comp == "reg"]
     )
     res$p.value
 })
 res <- unlist(res_list)
 names(res) <- markers
-res <- na.omit(res)
-res_adj <- p.adjust(res, method = "BH")
+res_adj <- p.adjust(na.omit(res), method = "BH")
 res_adj_sig <- data.frame(adj_p_val = res_adj[res_adj < 0.05])
 
-write.table(res_adj_sig, "DE_mars.txt", quote = FALSE, sep = "\t", row.names = TRUE)
+res_adj_sig
+```
 
-
+```{r}
+# sigs
+res_list <- lapply(sigs, function(i) {
+    res <- wilcox.test(
+        countn[i, comp == "dev"],
+        countn[i, comp == "reg"]
+    )
+    res$p.value
+})
+res <- unlist(res_list)
+names(res) <- sigs
+res_adj <- p.adjust(na.omit(res), method = "BH")
+res_adj_sig <- data.frame(adj_p_val = res_adj[res_adj < 0.05])
+res_adj_sig
 ```
 
 

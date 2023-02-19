@@ -100,30 +100,3 @@ ComplexHeatmap::pheatmap(df_mean_wide[rn %in% c("AER", "BasalEctoderm"), ],
 
 
 ```
-```{r}
-p1 <- ComplexHeatmap::pheatmap(df_mean_wide,
-                         name = 'Enrichment score',
-  cluster_rows = FALSE, cluster_cols = FALSE,
-  labels_row = rn,
-  colorRampPalette(c("white", "firebrick3"))(10),
-  na_col = "grey"
-)
-
-na_idx <- is.na(df_mean_wide)
-df_mean_wide[na_idx] <- 0
-
-# normalize
-df_mean_wide_norm <- apply(df_mean_wide, 2, function(x) x / max(x))
-df_mean_wide_norm[na_idx] <- NA
-
-p2 <- ComplexHeatmap::pheatmap(df_mean_wide_norm,
-                         name = 'Normalized enrichment score',
-  cluster_rows = FALSE, cluster_cols = FALSE,
-  labels_row = rn, colorRampPalette(c("white", "firebrick3"))(10),
-  na_col = "grey"
-)
-
-p1 %v% p2
-
-```
-
